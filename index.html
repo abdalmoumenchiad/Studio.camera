@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استوديو Pixel Pro لتعديل الصور والعلامة المائية 4K</title>
+    <!-- تحميل Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                        mono: ['Roboto', 'Inter', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- تحميل مكتبة exifr لاستخراج بيانات الكاميرا EXIF -->
+    <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+    <!-- تحميل الخطوط -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #090b10;
+            color: #f1f5f9;
+        }
+        .ltr-input {
+            direction: ltr;
+            font-family: 'Roboto', 'Inter', sans-serif;
+        }
+        /* خلفية شطرنجية احترافية لمعاينة الحدود البيضاء */
+        .canvas-checkerboard {
+            background-color: #11151f;
+            background-image: 
+                linear-gradient(45deg, #181e2c 25%, transparent 25%), 
+                linear-gradient(-45deg, #181e2c 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #181e2c 75%), 
+                linear-gradient(-45deg, transparent 75%, #181e2c 75%);
+            background-size: 24px 24px;
+            background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+        }
+        /* تخصيص شريط التمرير */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: #1e293b;
+            border-radius: 999px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            transition: transform 0.15s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+        /* شريط تمرير مخصص للقوائم */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 999px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
+
+    <!-- الشريط العلوي -->
+    <header class="bg-[#0d111a]/90 backdrop-blur-lg border-b border-slate-800/80 sticky top-0 z-40">
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600/20 to-indigo-600/20 border border-blue-500/30 flex items-center justify-center shadow-inner">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"/>
+                        <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-white">Pixel Pro Studio</h1>
+                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-blue-600/20 text-blue-400 border border-blue-500/30">4K & CWM</span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">معالجة محلية بالبكسل • فلاتر سينمائية • شريط بيانات الكاميرا</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <button id="resetAllBtn" class="hidden items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span>إعادة ضبط</span>
+                </button>
+                <button id="headerUploadBtn" class="hidden items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition cursor-pointer">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                    <span>صورة جديدة</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- حاوية الرسائل التنبيهية (Toast) -->
+    <div id="toastContainer" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- مدخلات الملفات المخفية -->
+    <input type="file" id="imageInput" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" class="hidden">
+    <input type="file" id="customLogoInput" accept="image/png,image/svg+xml,image/jpeg" class="hidden">
+
+    <!-- المحتوى الرئيسي -->
+    <main class="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6">
+        
+        <!-- شاشة البداية / منطقة السحب والإفلات -->
+        <div id="uploadZone" class="max-w-2xl mx-auto my-8 sm:my-16">
+            <div id="dropArea" class="relative overflow-hidden border-2 border-dashed border-slate-700 hover:border-blue-500 bg-[#0f1420] rounded-3xl p-8 sm:p-14 text-center shadow-2xl transition-all cursor-pointer group">
+                <div class="w-20 h-20 mx-auto mb-6 rounded-2xl bg-blue-600/10 border border-blue-500/20 text-blue-400 flex items-center justify-center group-hover:scale-105 group-hover:bg-blue-600/20 transition-all">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <h2 class="text-xl sm:text-2xl font-extrabold text-white mb-2.5">ارفع صورتك لبدء المعالجة الاحترافية</h2>
+                <p class="text-slate-400 text-sm sm:text-base mb-7 max-w-md mx-auto leading-relaxed">
+                    استخراج تلقائي لبيانات EXIF، تطبيق فلاتر سينمائية، تحسين الإضاءة والتفاصيل، ورفع الدقة إلى 4K مع الحفاظ على كامل الجودة.
+                </p>
+                <button type="button" class="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-600/25 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    <span>اختيار صورة من الجهاز</span>
+                </button>
+                <div class="mt-8 pt-6 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400">
+                    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>معالجة محلية 100%</span>
+                    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>تصدير بالدقة الكاملة</span>
+                    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>شريط Pixel / CWM</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- مساحة العمل الرئيسية -->
+        <div id="workspace" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- العمود الأيمن/الأيسر للمعاينة الحية (7 أعمدة) -->
+            <div class="lg:col-span-7 flex flex-col gap-4 lg:sticky lg:top-20">
+                <div class="bg-[#0f1420] rounded-3xl p-4 sm:p-5 border border-slate-800/90 shadow-xl">
+                    
+                    <!-- شريط معلومات المعاينة وزر المقارنة -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div class="flex items-center gap-2">
+                            <span id="processingDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <span id="previewStatusText" class="text-xs sm:text-sm font-bold text-slate-200">المعاينة الحية (بعد التعديل)</span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <!-- زر المقارنة قبل / بعد (ضغط مطول أو نقر) -->
+                            <button type="button" id="compareBtn" 
+                                class="select-none inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 active:bg-amber-600 active:text-white text-slate-200 border border-slate-700 transition cursor-pointer"
+                                title="اضغط مع الاستمرار لرؤية الصورة الأصلية">
+                                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                <span>قبل / بعد (اضغط مطولاً)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- حاوية الكانفاس -->
+                    <div class="relative canvas-checkerboard rounded-2xl p-3 sm:p-4 flex items-center justify-center overflow-hidden border border-slate-800 min-h-[280px] sm:min-h-[440px]">
+                        <canvas id="previewCanvas" class="max-w-full max-h-[62vh] w-auto h-auto shadow-2xl rounded-sm transition-opacity duration-150"></canvas>
+                        
+                        <!-- شارة المقارنة تظهر عند الضغط على زر قبل/بعد -->
+                        <div id="beforeBadge" class="hidden absolute top-4 right-4 px-3 py-1 rounded-lg bg-black/80 backdrop-blur-md text-amber-400 border border-amber-500/40 text-xs font-extrabold tracking-wide">
+                            الصورة الأصلية (قبل)
+                        </div>
+                    </div>
+
+                    <!-- شريط الأبعاد وحجم الملف والتصدير -->
+                    <div class="mt-4 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <span id="resolutionBadge" class="ltr-input font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/90 text-slate-300 border border-slate-700/60">
+                                0 × 0 px
+                            </span>
+                            <span id="fileSizeBadge" class="ltr-input font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800/90 text-slate-400 border border-slate-700/60">
+                                الأصلي: 0 MB
+                            </span>
+                            <span id="upscaleTag" class="hidden font-bold px-2.5 py-1.5 rounded-lg bg-purple-600/20 text-purple-300 border border-purple-500/30">
+                                4K Upscale مفعّل
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-2 justify-end">
+                            <select id="exportFormat" class="px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 focus:outline-none focus:border-blue-500">
+                                <option value="image/jpeg">JPEG (جودة 100%)</option>
+                                <option value="image/png">PNG (Lossless بدون ضغط)</option>
+                            </select>
+                            <button id="downloadBtn" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:scale-[0.98] text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-blue-600/25 transition cursor-pointer">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                <span id="downloadBtnText">تحميل بالدقة الكاملة</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- لوحة التحكم والأدوات (5 أعمدة) -->
+            <div class="lg:col-span-5 bg-[#0f1420] rounded-3xl border border-slate-800/90 shadow-xl overflow-hidden flex flex-col">
+                
+                <!-- أزرار التنقل بين الأقسام (Tabs) -->
+                <div class="grid grid-cols-3 bg-[#0a0e17] p-1.5 border-b border-slate-800">
+                    <button type="button" data-tab="presets" class="tab-btn active-tab flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-extrabold bg-blue-600 text-white shadow transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+                        <span>الفلاتر الذكية</span>
+                    </button>
+                    <button type="button" data-tab="enhance" class="tab-btn flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-extrabold text-slate-400 hover:text-white transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                        <span>التفاصيل و 4K</span>
+                    </button>
+                    <button type="button" data-tab="watermark" class="tab-btn flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-xs font-extrabold text-slate-400 hover:text-white transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span>شريط Pixel</span>
+                    </button>
+                </div>
+
+                <!-- محتوى التبويب الأول: الفلاتر والأنماط البصرية -->
+                <div id="tab-presets" class="tab-panel p-5 space-y-5">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-extrabold text-white">اختر النمط البصري (Presets)</h3>
+                            <span id="activePresetLabel" class="text-xs font-bold text-blue-400">الأصلية</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" id="presetsGrid">
+                            <!-- الأصلية -->
+                            <button type="button" data-preset="original" class="preset-card active-preset text-right p-3 rounded-2xl border-2 border-blue-500 bg-blue-600/15 transition">
+                                <div class="w-full h-2 rounded-full bg-gradient-to-r from-slate-400 to-slate-200 mb-2"></div>
+                                <div class="text-xs font-extrabold text-white">الأصلية</div>
+                                <div class="text-[10px] text-slate-400 ltr-input">Original</div>
+                            </button>
+
+                            <!-- سينمائي -->
+                            <button type="button" data-preset="cinematic" class="preset-card text-right p-3 rounded-2xl border border-slate-800 bg-[#141b29] hover:border-slate-600 transition">
+                                <div class="w-full h-2 rounded-full bg-gradient-to-r from-teal-500 via-cyan-600 to-amber-500 mb-2"></div>
+                                <div class="text-xs font-extrabold text-white">سينمائي</div>
+                                <div class="text-[10px] text-slate-400 ltr-input">Teal & Orange</div>
+                            </button>
+
+                            <!-- هادئ ودافئ -->
+                            <button type="button" data-preset="calm" class="preset-card text-right p-3 rounded-2xl border border-slate-800 bg-[#141b29] hover:border-slate-600 transition">
+                                <div class="w-full h-2 rounded-full bg-gradient-to-r from-stone-400 via-amber-200 to-orange-300 mb-2"></div>
+                                <div class="text-xs font-extrabold text-white">هادئ ودافئ</div>
+                                <div class="text-[10px] text-slate-400 ltr-input">Calm & Moody</div>
+                            </button>
+
+                            <!-- احترافي / مجلة -->
+                            <button type="button" data-preset="editorial" class="preset-card text-right p-3 rounded-2xl border border-slate-800 bg-[#141b29] hover:border-slate-600 transition">
+                                <div class="w-full h-2 rounded-full bg-gradient-to-r from-indigo-400 via-slate-200 to-rose-300 mb-2"></div>
+                                <div class="text-xs font-extrabold text-white">احترافي / مجلة</div>
+                                <div class="text-[10px] text-slate-400 ltr-input">Editorial Pro</div>
+                            </button>
+
+                            <!-- طبيعة حية -->
+                            <button type="button" data-preset="vivid" class="preset-card text-right p-3 rounded-2xl border border-slate-800 bg-[#141b29] hover:border-slate-600 transition">
+                                <div class="w-full h-2 rounded-full bg-gradient-to-r from-emerald-500 via-lime-400 to-sky-400 mb-2"></div>
+                                <div class="text-xs font-extrabold text-white">طبيعة حية</div>
+                                <div class="text-[10px] text-slate-400 ltr-input">Vivid HDR</div>
+                            </button>
+
+                            <!-- أبيض وأسود فني -->
+                            <button type="button" data-preset="noir" class="preset-card text-right p-3 rounded-2xl border border-slate-800 bg-[#141b29] hover:border-slate-600 transition">
+                                <div class="w-full h-2 rounded-full bg-gradient-to-r from-black via-zinc-500 to-white mb-2"></div>
+                                <div class="text-xs font-extrabold text-white">أبيض وأسود فني</div>
+                                <div class="text-[10px] text-slate-400 ltr-input">Noir B&W</div>
+                            </button>
+
+                            <!-- ذهبي -->
+                            <button type="button" data-preset="golden" class="preset-card text-right p-3 rounded-2xl border border-slate-800 bg-[#141b29] hover:border-slate-600 transition col-span-2 sm:col-span-3">
+                                <div class="w-full h-2 rounded-full bg-gradient-to-r from-amber-600 via-orange-400 to-yellow-200 mb-2"></div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-extrabold text-white">ساعة الغروب الذهبية</span>
+                                    <span class="text-[10px] text-slate-400 ltr-input">Golden Hour</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- قوة الفلتر -->
+                    <div class="pt-3 border-t border-slate-800/80">
+                        <div class="flex items-center justify-between mb-2">
+                            <label for="presetIntensity" class="text-xs font-bold text-slate-300">قوة تطبيق الفلتر</label>
+                            <span id="presetIntensityVal" class="ltr-input text-xs font-bold text-blue-400">100%</span>
+                        </div>
+                        <input type="range" id="presetIntensity" min="0" max="100" value="100" class="w-full">
+                    </div>
+
+                    <!-- زر التحسين التلقائي الذكي للإضاءة -->
+                    <div class="pt-3 border-t border-slate-800/80">
+                        <div class="flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-l from-blue-950/50 to-indigo-950/40 border border-blue-500/30">
+                            <div class="pr-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-extrabold text-white">تعديل الإضاءة الذكي التلقائي</span>
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-bold">Auto Histogram</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-0.5">يحلل إضاءة الصورة ويوازن الظلال والتباين تلقائياً</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                <input type="checkbox" id="autoLightToggle" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- محتوى التبويب الثاني: التفاصيل والحدة و 4K Upscale والضبط اليدوي -->
+                <div id="tab-enhance" class="tab-panel hidden p-5 space-y-5">
+                    
+                    <!-- بطاقة تفعيل 4K Upscale -->
+                    <div class="p-4 rounded-2xl bg-gradient-to-br from-purple-950/40 via-[#141b29] to-blue-950/30 border border-purple-500/30">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-extrabold text-white">تفعيل 4K Upscale (مضاعفة الدقة)</span>
+                                    <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-purple-600/30 text-purple-300 border border-purple-400/30">2X HD</span>
+                                </div>
+                                <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                                    يرفع أبعاد الصورة إلى الضعف (حتى دقة 4K) باستخدام تنعيم ثنائي التكعيب عالي الدقة مع شحذ الحواف.
+                                </p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer shrink-0 mr-3">
+                                <input type="checkbox" id="upscale4kToggle" class="sr-only peer">
+                                <div class="w-12 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- شريط زيادة التفاصيل والحدة (Unsharp Mask Convolution) -->
+                    <div class="p-3.5 rounded-2xl bg-[#141b29] border border-slate-800 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label for="claritySlider" class="text-xs font-extrabold text-white block">زيادة التفاصيل والحدة (Details & Clarity)</label>
+                                <span class="text-[10px] text-slate-400">خوارزمية إبراز الملمس الدقيق (Unsharp Mask)</span>
+                            </div>
+                            <span id="clarityVal" class="ltr-input text-xs font-extrabold text-blue-400">0%</span>
+                        </div>
+                        <input type="range" id="claritySlider" min="0" max="100" value="0" class="w-full">
+                    </div>
+
+                    <!-- أدوات الضبط اليدوية الدقيقة -->
+                    <div class="space-y-3.5 pt-2 border-t border-slate-800/80">
+                        <h4 class="text-xs font-extrabold text-slate-300">الضبط اليدوي الدقيق</h4>
+                        
+                        <!-- الإضاءة -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400 font-semibold">الإضاءة (Brightness)</span>
+                                <span id="brightnessVal" class="ltr-input font-bold text-slate-200">0</span>
+                            </div>
+                            <input type="range" id="brightnessSlider" min="-50" max="50" value="0" class="w-full">
+                        </div>
+
+                        <!-- التباين -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400 font-semibold">التباين (Contrast)</span>
+                                <span id="contrastVal" class="ltr-input font-bold text-slate-200">0</span>
+                            </div>
+                            <input type="range" id="contrastSlider" min="-50" max="50" value="0" class="w-full">
+                        </div>
+
+                        <!-- التشبع اللوني -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400 font-semibold">التشبع اللوني (Saturation)</span>
+                                <span id="saturationVal" class="ltr-input font-bold text-slate-200">0</span>
+                            </div>
+                            <input type="range" id="saturationSlider" min="-50" max="50" value="0" class="w-full">
+                        </div>
+
+                        <!-- الدفء -->
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400 font-semibold">حرارة الألوان / الدفء (Warmth)</span>
+                                <span id="warmthVal" class="ltr-input font-bold text-slate-200">0</span>
+                            </div>
+                            <input type="range" id="warmthSlider" min="-50" max="50" value="0" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- محتوى التبويب الثالث: شريط العلامة المائية الاحترافي (CWM / Pixel) -->
+                <div id="tab-watermark" class="tab-panel hidden p-5 space-y-4">
+                    
+                    <!-- مفتاح تفعيل / إيقاف الشريط السفلي -->
+                    <div class="flex items-center justify-between p-3.5 rounded-2xl bg-[#141b29] border border-slate-800">
+                        <div>
+                            <span class="text-xs font-extrabold text-white block">إضافة شريط بيانات الكاميرا السفلي</span>
+                            <span id="exifStatusBadge" class="text-[11px] text-blue-400 font-semibold">مفعّل (تصميم Google Pixel / CWM)</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="watermarkToggle" checked class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+                    <div id="watermarkControls" class="space-y-4 transition-opacity">
+                        <!-- اسم الجهاز -->
+                        <div>
+                            <label for="deviceInput" class="block text-xs font-bold text-slate-400 mb-1.5">اسم الهاتف / الكاميرا (اليسار)</label>
+                            <input type="text" id="deviceInput" value="Google Pixel 7 Pro" placeholder="Google Pixel 7 Pro"
+                                class="ltr-input w-full px-3.5 py-2.5 rounded-xl bg-[#141b29] border border-slate-700/80 text-white focus:border-blue-500 outline-none text-sm font-bold">
+                        </div>
+
+                        <!-- الشعار -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="text-xs font-bold text-slate-400">الشعار (بجانب الخط الفاصل)</label>
+                                <button type="button" id="uploadCustomLogoBtn" class="text-xs text-blue-400 hover:underline font-bold">
+                                    + رفع شعار مخصص
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-4 gap-2" id="logoSelector">
+                                <button type="button" data-logo="google" class="logo-btn active-logo flex flex-col items-center justify-center p-2 rounded-xl border-2 border-blue-500 bg-blue-600/15 transition">
+                                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+                                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"/>
+                                        <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"/>
+                                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"/>
+                                    </svg>
+                                    <span class="text-[10px] mt-1 font-semibold text-slate-200">Google</span>
+                                </button>
+                                <button type="button" data-logo="pixel" class="logo-btn flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-[#141b29] hover:border-slate-600 transition">
+                                    <div class="w-5 h-5 rounded bg-slate-200 text-slate-900 flex items-center justify-center text-xs font-extrabold">P</div>
+                                    <span class="text-[10px] mt-1 font-semibold text-slate-300">Pixel</span>
+                                </button>
+                                <button type="button" data-logo="camera" class="logo-btn flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-[#141b29] hover:border-slate-600 transition">
+                                    <svg class="w-5 h-5 text-slate-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                    <span class="text-[10px] mt-1 font-semibold text-slate-300">Lens</span>
+                                </button>
+                                <button type="button" data-logo="none" class="logo-btn flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-[#141b29] hover:border-slate-600 transition">
+                                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    <span class="text-[10px] mt-1 font-semibold text-slate-400">بدون</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- إعدادات العدسة -->
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div>
+                                <label for="focalInput" class="block text-[11px] font-bold text-slate-400 mb-1">البعد البؤري</label>
+                                <input type="text" id="focalInput" value="117mm" class="ltr-input w-full px-3 py-2 rounded-xl bg-[#141b29] border border-slate-700/80 text-white text-xs font-bold outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="apertureInput" class="block text-[11px] font-bold text-slate-400 mb-1">فتحة العدسة</label>
+                                <input type="text" id="apertureInput" value="f/3.5" class="ltr-input w-full px-3 py-2 rounded-xl bg-[#141b29] border border-slate-700/80 text-white text-xs font-bold outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="shutterInput" class="block text-[11px] font-bold text-slate-400 mb-1">سرعة الغالق</label>
+                                <input type="text" id="shutterInput" value="1/97" class="ltr-input w-full px-3 py-2 rounded-xl bg-[#141b29] border border-slate-700/80 text-white text-xs font-bold outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="isoInput" class="block text-[11px] font-bold text-slate-400 mb-1">حساسية ISO</label>
+                                <input type="text" id="isoInput" value="ISO777" class="ltr-input w-full px-3 py-2 rounded-xl bg-[#141b29] border border-slate-700/80 text-white text-xs font-bold outline-none focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <!-- التاريخ والوقت -->
+                        <div>
+                            <label for="dateInput" class="block text-[11px] font-bold text-slate-400 mb-1">التاريخ والوقت</label>
+                            <input type="text" id="dateInput" value="2026.06.29 15:20:49" class="ltr-input w-full px-3 py-2 rounded-xl bg-[#141b29] border border-slate-700/80 text-slate-200 text-xs outline-none focus:border-blue-500">
+                        </div>
+
+                        <!-- ارتفاع الشريط -->
+                        <div class="pt-2 border-t border-slate-800/80">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label for="barHeightSlider" class="text-xs font-bold text-slate-400">ارتفاع الشريط الأبيض</label>
+                                <span id="barHeightValue" class="ltr-input text-xs font-bold text-blue-400">12%</span>
+                            </div>
+                            <input type="range" id="barHeightSlider" min="8" max="18" step="0.5" value="12" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // =========================================================================
+        // 1. الحالة المركزية للتطبيق (Application State)
+        // =========================================================================
+        const state = {
+            image: null,
+            originalFileName: 'pixel_photo',
+            originalFileSizeMB: 0,
+            isComparingBefore: false,
+
+            // إعدادات الفلاتر والمعالجة
+            preset: 'original',
+            presetIntensity: 100, // 0 - 100
+            autoLight: false,
+            upscale4k: false,
+            clarity: 0,           // 0 - 100
+            brightness: 0,        // -50 to 50
+            contrast: 0,          // -50 to 50
+            saturation: 0,        // -50 to 50
+            warmth: 0,            // -50 to 50
+
+            // إعدادات شريط العلامة المائية (CWM Style)
+            watermarkEnabled: true,
+            device: 'Google Pixel 7 Pro',
+            focalLength: '117mm',
+            aperture: 'f/3.5',
+            shutterSpeed: '1/97',
+            iso: 'ISO777',
+            dateTime: '2026.06.29 15:20:49',
+            logoType: 'google',
+            customLogoImg: null,
+            barHeightPercent: 12
+        };
+
+        // تخزين مؤقت لتحليل الهيستوغرام الخاص بالصورة الحالية
+        let cachedAutoLightStats = null;
+        let renderTimeout = null;
+
+        // =========================================================================
+        // 2. مراجع عناصر DOM
+        // =========================================================================
+        const el = {
+            imageInput: document.getElementById('imageInput'),
+            customLogoInput: document.getElementById('customLogoInput'),
+            uploadZone: document.getElementById('uploadZone'),
+            dropArea: document.getElementById('dropArea'),
+            workspace: document.getElementById('workspace'),
+            previewCanvas: document.getElementById('previewCanvas'),
+            resolutionBadge: document.getElementById('resolutionBadge'),
+            fileSizeBadge: document.getElementById('fileSizeBadge'),
+            upscaleTag: document.getElementById('upscaleTag'),
+            headerUploadBtn: document.getElementById('headerUploadBtn'),
+            resetAllBtn: document.getElementById('resetAllBtn'),
+            compareBtn: document.getElementById('compareBtn'),
+            beforeBadge: document.getElementById('beforeBadge'),
+            previewStatusText: document.getElementById('previewStatusText'),
+            processingDot: document.getElementById('processingDot'),
+            downloadBtn: document.getElementById('downloadBtn'),
+            downloadBtnText: document.getElementById('downloadBtnText'),
+            exportFormat: document.getElementById('exportFormat'),
+
+            // أدوات الفلاتر والتحسين
+            activePresetLabel: document.getElementById('activePresetLabel'),
+            presetIntensity: document.getElementById('presetIntensity'),
+            presetIntensityVal: document.getElementById('presetIntensityVal'),
+            autoLightToggle: document.getElementById('autoLightToggle'),
+            upscale4kToggle: document.getElementById('upscale4kToggle'),
+            claritySlider: document.getElementById('claritySlider'),
+            clarityVal: document.getElementById('clarityVal'),
+            brightnessSlider: document.getElementById('brightnessSlider'),
+            brightnessVal: document.getElementById('brightnessVal'),
+            contrastSlider: document.getElementById('contrastSlider'),
+            contrastVal: document.getElementById('contrastVal'),
+            saturationSlider: document.getElementById('saturationSlider'),
+            saturationVal: document.getElementById('saturationVal'),
+            warmthSlider: document.getElementById('warmthSlider'),
+            warmthVal: document.getElementById('warmthVal'),
+
+            // أدوات العلامة المائية
+            watermarkToggle: document.getElementById('watermarkToggle'),
+            watermarkControls: document.getElementById('watermarkControls'),
+            exifStatusBadge: document.getElementById('exifStatusBadge'),
+            deviceInput: document.getElementById('deviceInput'),
+            focalInput: document.getElementById('focalInput'),
+            apertureInput: document.getElementById('apertureInput'),
+            shutterInput: document.getElementById('shutterInput'),
+            isoInput: document.getElementById('isoInput'),
+            dateInput: document.getElementById('dateInput'),
+            barHeightSlider: document.getElementById('barHeightSlider'),
+            barHeightValue: document.getElementById('barHeightValue'),
+            uploadCustomLogoBtn: document.getElementById('uploadCustomLogoBtn')
+        };
+
+        // =========================================================================
+        // 3. نظام الإشعارات (Toast)
+        // =========================================================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const styles = {
+                success: 'bg-emerald-600 text-white border-emerald-400/30',
+                error: 'bg-rose-600 text-white border-rose-400/30',
+                info: 'bg-slate-800 text-slate-100 border-slate-700'
+            };
+            toast.className = `${styles[type] || styles.info} border px-4 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold transition-all duration-300 transform translate-y-3 opacity-0`;
+            toast.textContent = message;
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => toast.classList.remove('translate-y-3', 'opacity-0'));
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-3');
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        // =========================================================================
+        // 4. استخراج بيانات الكاميرا EXIF وتنسيقها
+        // =========================================================================
+        function formatShutterSpeed(exposureTime) {
+            if (!exposureTime) return '';
+            if (exposureTime >= 1) return `${Number(exposureTime.toFixed(1))}s`;
+            return `1/${Math.round(1 / exposureTime)}`;
+        }
+
+        function formatDateTime(dateObj) {
+            if (!dateObj) return '';
+            try {
+                const d = (dateObj instanceof Date) ? dateObj : new Date(dateObj);
+                if (isNaN(d.getTime())) return '';
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+            } catch {
+                return '';
+            }
+        }
+
+        function formatCameraModel(make, model) {
+            if (!model && !make) return 'Google Pixel 7 Pro';
+            let cleanModel = (model || '').trim();
+            let cleanMake = (make || '').trim();
+            if (/^Pixel\s/i.test(cleanModel)) return `Google ${cleanModel}`;
+            if (cleanMake && !cleanModel.toLowerCase().startsWith(cleanMake.toLowerCase())) {
+                return `${cleanMake} ${cleanModel}`;
+            }
+            return cleanModel || 'Google Pixel 7 Pro';
+        }
+
+        async function extractExifData(file) {
+            try {
+                const exif = await window.exifr.parse(file, { tiff: true, exif: true });
+                if (exif) {
+                    state.device = formatCameraModel(exif.Make, exif.Model);
+                    el.deviceInput.value = state.device;
+
+                    const focal = exif.FocalLengthIn35mmFormat || exif.FocalLength;
+                    if (focal) {
+                        state.focalLength = `${Math.round(focal)}mm`;
+                        el.focalInput.value = state.focalLength;
+                    }
+                    if (exif.FNumber) {
+                        state.aperture = `f/${Number(exif.FNumber.toFixed(1))}`;
+                        el.apertureInput.value = state.aperture;
+                    }
+                    if (exif.ExposureTime) {
+                        state.shutterSpeed = formatShutterSpeed(exif.ExposureTime);
+                        el.shutterInput.value = state.shutterSpeed;
+                    }
+                    if (exif.ISO) {
+                        state.iso = `ISO${exif.ISO}`;
+                        el.isoInput.value = state.iso;
+                    }
+                    const rawDate = exif.DateTimeOriginal || exif.CreateDate || exif.ModifyDate;
+                    const formattedDate = formatDateTime(rawDate);
+                    if (formattedDate) {
+                        state.dateTime = formattedDate;
+                        el.dateInput.value = state.dateTime;
+                    }
+                    el.exifStatusBadge.textContent = 'تم استخراج EXIF تلقائياً ✓';
+                } else {
+                    const fallbackDate = formatDateTime(new Date(file.lastModified));
+                    if (fallbackDate) {
+                        state.dateTime = fallbackDate;
+                        el.dateInput.value = fallbackDate;
+                    }
+                    el.exifStatusBadge.textContent = 'بيانات افتراضية (قابلة للتعديل)';
+                }
+            } catch (e) {
+                el.exifStatusBadge.textContent = 'وضع التعديل اليدوي';
+            }
+        }
+
+        // =========================================================================
+        // 5. محرك معالجة البكسل والهيستوغرام (Pixel-Level Image Engine)
+        // =========================================================================
+        
+        /**
+         * تحليل الهيستوغرام التلقائي لحساب معاملات تصحيح الإضاءة والتباين الذكي
+         */
+        function analyzeImageHistogram(img) {
+            const sampleCanvas = document.createElement('canvas');
+            const maxSample = 256;
+            const ratio = Math.min(1, maxSample / Math.max(img.naturalWidth, img.naturalHeight));
+            sampleCanvas.width = Math.max(1, Math.round(img.naturalWidth * ratio));
+            sampleCanvas.height = Math.max(1, Math.round(img.naturalHeight * ratio));
+            const sCtx = sampleCanvas.getContext('2d');
+            sCtx.drawImage(img, 0, 0, sampleCanvas.width, sampleCanvas.height);
+
+            const data = sCtx.getImageData(0, 0, sampleCanvas.width, sampleCanvas.height).data;
+            const hist = new Uint32Array(256);
+            let totalPixels = data.length / 4;
+            let sumLum = 0;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const lum = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+                hist[lum]++;
+                sumLum += lum;
+            }
+
+            const avgLum = sumLum / totalPixels;
+
+            // إيجاد النسبة المئوية 2% (الظلال) و 98% (الإضاءات العالية)
+            let p2 = 0, p98 = 255, acc = 0;
+            for (let i = 0; i < 256; i++) {
+                acc += hist[i];
+                if (acc / totalPixels >= 0.02) { p2 = i; break; }
+            }
+            acc = 0;
+            for (let i = 255; i >= 0; i--) {
+                acc += hist[i];
+                if (acc / totalPixels >= 0.02) { p98 = i; break; }
+            }
+
+            // حساب تصحيح جاما (Gamma) لتقريب متوسط السطوع نحو 126 بشكل طبيعي
+            const targetLum = 126;
+            let gamma = 1.0;
+            if (avgLum < 115) {
+                gamma = Math.max(0.72, avgLum / targetLum); // تفتيح الظلال
+            } else if (avgLum > 145) {
+                gamma = Math.min(1.32, avgLum / targetLum); // تهدئة السطوع الزائد
+            }
+
+            return { p2, p98, gamma, avgLum };
+        }
+
+        /**
+         * خوارزمية Convolution حقيقية لزيادة التفاصيل والحدّة (Unsharp Mask)
+         */
+        function applyUnsharpMask(imageData, amount) {
+            if (amount <= 0) return;
+            const w = imageData.width;
+            const h = imageData.height;
+            const src = imageData.data;
+            const copy = new Uint8ClampedArray(src);
+            const strength = (amount / 100) * 1.35; // معامل الشحذ المتوازن
+
+            // نواة تنعيم غاوسية 3x3 لحساب القناع غير الحاد (Original - Blurred)
+            for (let y = 1; y < h - 1; y++) {
+                const rowOffset = y * w * 4;
+                const prevRow = (y - 1) * w * 4;
+                const nextRow = (y + 1) * w * 4;
+
+                for (let x = 1; x < w - 1; x++) {
+                    const idx = rowOffset + x * 4;
+                    const left = idx - 4;
+                    const right = idx + 4;
+
+                    for (let c = 0; c < 3; c++) {
+                        // حساب المتوسط المرجح (Gaussian Blur 3x3)
+                        const blur = (
+                            copy[prevRow + (x - 1) * 4 + c] * 1 +
+                            copy[prevRow + x * 4 + c] * 2 +
+                            copy[prevRow + (x + 1) * 4 + c] * 1 +
+                            copy[left + c] * 2 +
+                            copy[idx + c] * 4 +
+                            copy[right + c] * 2 +
+                            copy[nextRow + (x - 1) * 4 + c] * 1 +
+                            copy[nextRow + x * 4 + c] * 2 +
+                            copy[nextRow + (x + 1) * 4 + c] * 1
+                        ) / 16;
+
+                        const detail = copy[idx + c] - blur;
+                        // تجنب تضخيم الضوضاء الدقيقة جداً (Threshold)
+                        if (Math.abs(detail) > 2.5) {
+                            src[idx + c] = copy[idx + c] + detail * strength;
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * تطبيق الفلاتر، الإضاءة الذكية، والضبط اليدوي على مستوى كل بكسل (ImageData)
+         */
+        function processImagePixels(ctx, width, height) {
+            const hasEdits = (
+                state.preset !== 'original' ||
+                state.autoLight ||
+                state.clarity > 0 ||
+                state.brightness !== 0 ||
+                state.contrast !== 0 ||
+                state.saturation !== 0 ||
+                state.warmth !== 0
+            );
+
+            if (!hasEdits) return;
+
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+
+            // 1. تجهيز جداول البحث السريعة (LUT) للإضاءة التلقائية والضبط اليدوي
+            const autoStats = state.autoLight ? cachedAutoLightStats : null;
+            const rangeSpan = autoStats ? Math.max(40, autoStats.p98 - autoStats.p2) : 255;
+
+            const brightOffset = state.brightness * 1.4;
+            const contrastFactor = (259 * (state.contrast * 1.6 + 255)) / (255 * (259 - state.contrast * 1.6));
+            const satFactor = 1 + (state.saturation / 65);
+            const warmthShift = state.warmth * 0.7;
+            const pIntensity = state.presetIntensity / 100;
+
+            for (let i = 0; i < data.length; i += 4) {
+                let r = data[i];
+                let g = data[i + 1];
+                let b = data[i + 2];
+
+                // أ) تطبيق الإضاءة التلقائية الذكية (Auto Histogram Stretch + Gamma)
+                if (autoStats) {
+                    r = ((r - autoStats.p2) / rangeSpan) * 255;
+                    g = ((g - autoStats.p2) / rangeSpan) * 255;
+                    b = ((b - autoStats.p2) / rangeSpan) * 255;
+
+                    r = Math.max(0, Math.min(255, r));
+                    g = Math.max(0, Math.min(255, g));
+                    b = Math.max(0, Math.min(255, b));
+
+                    if (autoStats.gamma !== 1.0) {
+                        r = 255 * Math.pow(r / 255, autoStats.gamma);
+                        g = 255 * Math.pow(g / 255, autoStats.gamma);
+                        b = 255 * Math.pow(b / 255, autoStats.gamma);
+                    }
+                }
+
+                // ب) تطبيق الفلتر المختار (Presets Color Grading)
+                if (state.preset !== 'original' && pIntensity > 0) {
+                    let fr = r, fg = g, fb = b;
+                    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                    switch (state.preset) {
+                        case 'cinematic': {
+                            // Teal & Orange: ظلال زرقاء مخضرة + إضاءات دافئة + تباين سينمائي
+                            const shadowWeight = Math.max(0, 1 - lum / 140);
+                            const highWeight = Math.max(0, (lum - 110) / 145);
+                            fr = r + highWeight * 22 - shadowWeight * 12;
+                            fg = g + highWeight * 6 + shadowWeight * 4;
+                            fb = b - highWeight * 18 + shadowWeight * 24;
+                            // تعزيز التباين السينمائي (S-Curve)
+                            fr = (fr - 128) * 1.14 + 128;
+                            fg = (fg - 128) * 1.14 + 128;
+                            fb = (fb - 128) * 1.14 + 128;
+                            break;
+                        }
+                        case 'calm': {
+                            // هادئ ودافئ: تباين ناعم، ظلال مرفوعة قليلاً، ولمسة كريمية دافئة
+                            fr = r * 0.96 + 14;
+                            fg = g * 0.95 + 11;
+                            fb = b * 0.90 + 6;
+                            // خفض التشبع قليلاً لمظهر هادئ
+                            const cLum = 0.299 * fr + 0.587 * fg + 0.114 * fb;
+                            fr = cLum + (fr - cLum) * 0.85;
+                            fg = cLum + (fg - cLum) * 0.85;
+                            fb = cLum + (fb - cLum) * 0.85;
+                            break;
+                        }
+                        case 'editorial': {
+                            // احترافي / مجلة: تباين نظيف، ألوان متوازنة، وعمق بصري
+                            fr = (r - 128) * 1.12 + 130;
+                            fg = (g - 128) * 1.10 + 128;
+                            fb = (b - 128) * 1.12 + 129;
+                            const eLum = 0.299 * fr + 0.587 * fg + 0.114 * fb;
+                            fr = eLum + (fr - eLum) * 1.08;
+                            fg = eLum + (fg - eLum) * 1.08;
+                            fb = eLum + (fb - eLum) * 1.08;
+                            break;
+                        }
+                        case 'vivid': {
+                            // طبيعة حية (Vivid HDR): تعزيز التشبع الذكي والمدى الديناميكي
+                            fr = (r - 128) * 1.15 + 128;
+                            fg = (g - 128) * 1.15 + 128;
+                            fb = (b - 128) * 1.15 + 128;
+                            const vLum = 0.299 * fr + 0.587 * fg + 0.114 * fb;
+                            fr = vLum + (fr - vLum) * 1.32;
+                            fg = vLum + (fg - vLum) * 1.34;
+                            fb = vLum + (fb - vLum) * 1.30;
+                            break;
+                        }
+                        case 'noir': {
+                            // أبيض وأسود فني درامي
+                            let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                            gray = (gray - 128) * 1.28 + 126;
+                            fr = fg = fb = gray;
+                            break;
+                        }
+                        case 'golden': {
+                            // ساعة الغروب الذهبية
+                            fr = r * 1.08 + 14;
+                            fg = g * 1.02 + 5;
+                            fb = b * 0.84 - 6;
+                            const gLum = 0.299 * fr + 0.587 * fg + 0.114 * fb;
+                            fr = gLum + (fr - gLum) * 1.15;
+                            fg = gLum + (fg - gLum) * 1.12;
+                            fb = gLum + (fb - gLum) * 1.05;
+                            break;
+                        }
+                    }
+
+                    // دمج الفلتر حسب نسبة القوة (0% إلى 100%)
+                    r = r + (fr - r) * pIntensity;
+                    g = g + (fg - g) * pIntensity;
+                    b = b + (fb - b) * pIntensity;
+                }
+
+                // ج) الضبط اليدوي (الإضاءة، التباين، الدفء، التشبع)
+                if (brightOffset !== 0) {
+                    r += brightOffset;
+                    g += brightOffset;
+                    b += brightOffset;
+                }
+
+                if (state.contrast !== 0) {
+                    r = contrastFactor * (r - 128) + 128;
+                    g = contrastFactor * (g - 128) + 128;
+                    b = contrastFactor * (b - 128) + 128;
+                }
+
+                if (warmthShift !== 0) {
+                    r += warmthShift;
+                    b -= warmthShift;
+                }
+
+                if (state.saturation !== 0) {
+                    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                    r = gray + (r - gray) * satFactor;
+                    g = gray + (g - gray) * satFactor;
+                    b = gray + (b - gray) * satFactor;
+                }
+
+                data[i] = r;
+                data[i + 1] = g;
+                data[i + 2] = b;
+            }
+
+            // 2. تطبيق خوارزمية زيادة التفاصيل والحدة (Unsharp Mask)
+            if (state.clarity > 0) {
+                applyUnsharpMask(imageData, state.clarity);
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // =========================================================================
+        // 6. رسم شعار العلامة التجارية وشريط Google Pixel / CWM السفلي
+        // =========================================================================
+        function drawBrandLogo(ctx, type, centerX, centerY, size) {
+            ctx.save();
+            const half = size / 2;
+
+            if (type === 'custom' && state.customLogoImg) {
+                const img = state.customLogoImg;
+                const aspect = img.width / img.height;
+                let drawW = size, drawH = size;
+                if (aspect > 1) drawH = size / aspect;
+                else drawW = size * aspect;
+                ctx.drawImage(img, centerX - drawW / 2, centerY - drawH / 2, drawW, drawH);
+                ctx.restore();
+                return;
+            }
+
+            if (type === 'google') {
+                const scale = size / 24;
+                ctx.translate(centerX - half, centerY - half);
+                ctx.scale(scale, scale);
+
+                ctx.fillStyle = '#4285F4';
+                ctx.fill(new Path2D("M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"));
+                ctx.fillStyle = '#34A853';
+                ctx.fill(new Path2D("M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"));
+                ctx.fillStyle = '#FBBC05';
+                ctx.fill(new Path2D("M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"));
+                ctx.fillStyle = '#EA4335';
+                ctx.fill(new Path2D("M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"));
+            } else if (type === 'pixel') {
+                ctx.beginPath();
+                ctx.roundRect(centerX - half, centerY - half, size, size, size * 0.24);
+                ctx.fillStyle = '#111827';
+                ctx.fill();
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = `bold ${Math.round(size * 0.62)}px Roboto, Inter, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('P', centerX, centerY + size * 0.04);
+            } else if (type === 'camera') {
+                ctx.strokeStyle = '#111827';
+                ctx.lineWidth = Math.max(2, size * 0.08);
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, half * 0.85, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, half * 0.35, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function drawWatermarkBar(ctx, imgW, imgH) {
+            if (!state.watermarkEnabled) return 0;
+
+            const baseDimension = Math.min(imgW, imgH * 1.35);
+            const barHeight = Math.round(baseDimension * (state.barHeightPercent / 100));
+
+            // خلفية الشريط الأبيض النقي في الأسفل
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, imgH, imgW, barHeight);
+
+            const paddingX = Math.round(barHeight * 0.42);
+            const barCenterY = imgH + (barHeight / 2);
+
+            let deviceFontSize = Math.round(barHeight * 0.275);
+            let specsFontSize = Math.round(barHeight * 0.225);
+            let dateFontSize = Math.round(barHeight * 0.185);
+            let logoSize = Math.round(barHeight * 0.48);
+
+            const specsText = [state.focalLength, state.aperture, state.shutterSpeed, state.iso]
+                .filter(Boolean)
+                .join(' ');
+            const dateText = state.dateTime.trim();
+            const deviceText = state.device.trim();
+
+            ctx.font = `700 ${deviceFontSize}px Roboto, Inter, sans-serif`;
+            const deviceWidth = ctx.measureText(deviceText).width;
+
+            ctx.font = `700 ${specsFontSize}px Roboto, Inter, sans-serif`;
+            const specsWidth = ctx.measureText(specsText).width;
+
+            ctx.font = `400 ${dateFontSize}px Roboto, Inter, sans-serif`;
+            const dateWidth = ctx.measureText(dateText).width;
+
+            const rightTextBlockWidth = Math.max(specsWidth, dateWidth);
+            const hasLogo = state.logoType !== 'none';
+            const logoGap = hasLogo ? Math.round(barHeight * 0.24) : 0;
+            const dividerGap = Math.round(barHeight * 0.24);
+            const rightTotalWidth = (hasLogo ? logoSize + logoGap : 0) + dividerGap + rightTextBlockWidth;
+
+            const availableWidth = imgW - (paddingX * 2) - (barHeight * 0.3);
+            const neededWidth = deviceWidth + rightTotalWidth;
+
+            if (neededWidth > availableWidth && availableWidth > 0) {
+                const shrinkRatio = availableWidth / neededWidth;
+                deviceFontSize = Math.max(10, Math.round(deviceFontSize * shrinkRatio));
+                specsFontSize = Math.max(9, Math.round(specsFontSize * shrinkRatio));
+                dateFontSize = Math.max(8, Math.round(dateFontSize * shrinkRatio));
+                logoSize = Math.max(14, Math.round(logoSize * shrinkRatio));
+            }
+
+            ctx.save();
+            ctx.direction = 'ltr';
+
+            // 1. اسم الجهاز بالخط العريض على اليسار
+            ctx.fillStyle = '#111111';
+            ctx.font = `700 ${deviceFontSize}px Roboto, Inter, sans-serif`;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(deviceText, paddingX, barCenterY);
+
+            // 2. تفاصيل العدسة والتاريخ على اليمين
+            const rightEdgeX = imgW - paddingX;
+            ctx.font = `700 ${specsFontSize}px Roboto, Inter, sans-serif`;
+            const finalSpecsWidth = ctx.measureText(specsText).width;
+            ctx.font = `400 ${dateFontSize}px Roboto, Inter, sans-serif`;
+            const finalDateWidth = ctx.measureText(dateText).width;
+            const finalRightTextWidth = Math.max(finalSpecsWidth, finalDateWidth);
+
+            const textStartX = rightEdgeX - finalRightTextWidth;
+            const actualDividerGap = Math.round(logoSize * 0.45);
+            const dividerX = textStartX - actualDividerGap;
+
+            const lineOffset = Math.round(barHeight * 0.145);
+            ctx.fillStyle = '#111111';
+            ctx.font = `700 ${specsFontSize}px Roboto, Inter, sans-serif`;
+            if (dateText) {
+                ctx.fillText(specsText, textStartX, barCenterY - lineOffset);
+                ctx.fillStyle = '#7A7F87';
+                ctx.font = `400 ${dateFontSize}px Roboto, Inter, sans-serif`;
+                ctx.fillText(dateText, textStartX, barCenterY + lineOffset * 1.05);
+            } else {
+                ctx.fillText(specsText, textStartX, barCenterY);
+            }
+
+            // 3. الخط الفاصل العمودي الرمادي
+            const dividerHalfH = Math.round(logoSize * 0.56);
+            ctx.strokeStyle = '#CBD5E1';
+            ctx.lineWidth = Math.max(1.5, Math.round(barHeight * 0.015));
+            ctx.beginPath();
+            ctx.moveTo(dividerX, barCenterY - dividerHalfH);
+            ctx.lineTo(dividerX, barCenterY + dividerHalfH);
+            ctx.stroke();
+
+            // 4. الشعار بجانب الخط الفاصل
+            if (hasLogo) {
+                const logoCenterX = dividerX - actualDividerGap - (logoSize / 2);
+                drawBrandLogo(ctx, state.logoType, logoCenterX, barCenterY, logoSize);
+            }
+
+            ctx.restore();
+            return barHeight;
+        }
+
+        // =========================================================================
+        // 7. دالة بناء الكانفاس النهائي (للمعاينة أو التصدير بالدقة الكاملة)
+        // =========================================================================
+        function buildProcessedCanvas(targetCanvas, isFullExport = false) {
+            if (!state.image) return;
+
+            const img = state.image;
+            const scaleFactor = state.upscale4k ? 2 : 1;
+
+            // في المعاينة الحية نستخدم حداً أقصى ذكياً (حتى 1600px) للاستجابة الفورية لأشرطة التمرير،
+            // أما عند التصدير (isFullExport) فنستخدم 100% من الأبعاد الأصلية × معامل 4K Upscale
+            let renderW = img.naturalWidth * scaleFactor;
+            let renderH = img.naturalHeight * scaleFactor;
+
+            if (!isFullExport) {
+                const maxPreviewDim = 1600;
+                const previewScale = Math.min(1, maxPreviewDim / Math.max(renderW, renderH));
+                renderW = Math.round(renderW * previewScale);
+                renderH = Math.round(renderH * previewScale);
+            }
+
+            // حساب ارتفاع الشريط مسبقاً لتحديد أبعاد الكانفاس الكلية
+            const baseDim = Math.min(renderW, renderH * 1.35);
+            const barH = state.watermarkEnabled ? Math.round(baseDim * (state.barHeightPercent / 100)) : 0;
+
+            targetCanvas.width = renderW;
+            targetCanvas.height = renderH + barH;
+
+            const ctx = targetCanvas.getContext('2d');
+            // تفعيل التنعيم ثنائي التكعيب عالي الجودة (مهم جداً لـ 4K Upscale)
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+
+            // رسم الصورة
+            ctx.drawImage(img, 0, 0, renderW, renderH);
+
+            // إذا لم يكن المستخدم في وضع مقارنة "قبل التعديل"، نطبق الفلاتر والمعالجة والشريط
+            if (!state.isComparingBefore) {
+                processImagePixels(ctx, renderW, renderH);
+                // تعزيز إضافي طفيف للحدة عند تفعيل 4K Upscale
+                if (state.upscale4k && state.clarity === 0) {
+                    const upData = ctx.getImageData(0, 0, renderW, renderH);
+                    applyUnsharpMask(upData, 22);
+                    ctx.putImageData(upData, 0, 0);
+                }
+                drawWatermarkBar(ctx, renderW, renderH);
+            } else {
+                // في وضع "قبل" نعرض الصورة الأصلية فقط بدون شريط أو فلاتر
+                targetCanvas.height = renderH;
+                ctx.drawImage(img, 0, 0, renderW, renderH);
+            }
+        }
+
+        function updateOutputResolutionBadge() {
+            if (!state.image) return;
+            const scaleFactor = state.upscale4k ? 2 : 1;
+            const finalW = state.image.naturalWidth * scaleFactor;
+            const finalH = state.image.naturalHeight * scaleFactor;
+            const baseDim = Math.min(finalW, finalH * 1.35);
+            const barH = state.watermarkEnabled ? Math.round(baseDim * (state.barHeightPercent / 100)) : 0;
+
+            el.resolutionBadge.textContent = `${finalW} × ${finalH + barH} px`;
+            el.upscaleTag.classList.toggle('hidden', !state.upscale4k);
+        }
+
+        function schedulePreviewRender() {
+            updateOutputResolutionBadge();
+            el.processingDot.classList.replace('bg-emerald-500', 'bg-amber-400');
+
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(() => {
+                requestAnimationFrame(() => {
+                    buildProcessedCanvas(el.previewCanvas, false);
+                    el.processingDot.classList.replace('bg-amber-400', 'bg-emerald-500');
+                });
+            }, 25);
+        }
+
+        // =========================================================================
+        // 8. معالجة رفع الصور والتفاعل مع الواجهة
+        // =========================================================================
+        async function handleImageFile(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                showToast('يرجى اختيار ملف صورة صالح (JPG, PNG, WebP).', 'error');
+                return;
+            }
+
+            state.originalFileName = file.name.replace(/\.[^/.]+$/, '') || 'pixel_photo';
+            state.originalFileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            el.fileSizeBadge.textContent = `الأصلي: ${state.originalFileSizeMB} MB`;
+
+            await extractExifData(file);
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    state.image = img;
+                    cachedAutoLightStats = analyzeImageHistogram(img);
+
+                    el.uploadZone.classList.add('hidden');
+                    el.workspace.classList.remove('hidden');
+                    el.headerUploadBtn.classList.replace('hidden', 'inline-flex');
+                    el.resetAllBtn.classList.replace('hidden', 'inline-flex');
+
+                    schedulePreviewRender();
+                    showToast('تم تحميل الصورة وتحليل الإضاءة بنجاح!', 'success');
+                };
+                img.onerror = () => showToast('تعذر قراءة الصورة، جرب صيغة أخرى.', 'error');
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // أحداث الرفع والسحب والإفلات
+        el.dropArea.addEventListener('click', () => el.imageInput.click());
+        el.headerUploadBtn.addEventListener('click', () => el.imageInput.click());
+        el.imageInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) handleImageFile(e.target.files[0]);
+        });
+
+        ['dragenter', 'dragover'].forEach(evt => {
+            el.dropArea.addEventListener(evt, (e) => {
+                e.preventDefault();
+                el.dropArea.classList.add('border-blue-500', 'bg-blue-950/20');
+            });
+        });
+        ['dragleave', 'drop'].forEach(evt => {
+            el.dropArea.addEventListener(evt, (e) => {
+                e.preventDefault();
+                el.dropArea.classList.remove('border-blue-500', 'bg-blue-950/20');
+            });
+        });
+        el.dropArea.addEventListener('drop', (e) => {
+            if (e.dataTransfer?.files?.[0]) handleImageFile(e.dataTransfer.files[0]);
+        });
+
+        // التنقل بين التبويبات (Tabs)
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('bg-blue-600', 'text-white', 'shadow');
+                    b.classList.add('text-slate-400');
+                });
+                btn.classList.add('bg-blue-600', 'text-white', 'shadow');
+                btn.classList.remove('text-slate-400');
+
+                document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+                document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden');
+            });
+        });
+
+        // اختيار الفلاتر الجاهزة (Presets)
+        const presetNamesAr = {
+            original: 'الأصلية',
+            cinematic: 'سينمائي (Teal & Orange)',
+            calm: 'هادئ ودافئ (Calm & Moody)',
+            editorial: 'احترافي / مجلة (Editorial Pro)',
+            vivid: 'طبيعة حية (Vivid HDR)',
+            noir: 'أبيض وأسود فني (Noir B&W)',
+            golden: 'ساعة الغروب الذهبية'
+        };
+
+        document.querySelectorAll('.preset-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.preset-card').forEach(c => {
+                    c.classList.remove('border-2', 'border-blue-500', 'bg-blue-600/15');
+                    c.classList.add('border', 'border-slate-800', 'bg-[#141b29]');
+                });
+                card.classList.remove('border', 'border-slate-800', 'bg-[#141b29]');
+                card.classList.add('border-2', 'border-blue-500', 'bg-blue-600/15');
+
+                state.preset = card.dataset.preset;
+                el.activePresetLabel.textContent = presetNamesAr[state.preset] || state.preset;
+                schedulePreviewRender();
+            });
+        });
+
+        // أشرطة التمرير والمفاتيح
+        el.presetIntensity.addEventListener('input', (e) => {
+            state.presetIntensity = Number(e.target.value);
+            el.presetIntensityVal.textContent = `${state.presetIntensity}%`;
+            schedulePreviewRender();
+        });
+
+        el.autoLightToggle.addEventListener('change', (e) => {
+            state.autoLight = e.target.checked;
+            schedulePreviewRender();
+            if (state.autoLight) showToast('تم تفعيل موازنة الإضاءة الذكية حسب الصورة', 'info');
+        });
+
+        el.upscale4kToggle.addEventListener('change', (e) => {
+            state.upscale4k = e.target.checked;
+            schedulePreviewRender();
+            if (state.upscale4k) showToast('تم تفعيل مضاعفة الدقة 4K Upscale', 'success');
+        });
+
+        el.claritySlider.addEventListener('input', (e) => {
+            state.clarity = Number(e.target.value);
+            el.clarityVal.textContent = `${state.clarity}%`;
+            schedulePreviewRender();
+        });
+
+        const manualSliders = [
+            { slider: el.brightnessSlider, valEl: el.brightnessVal, key: 'brightness' },
+            { slider: el.contrastSlider, valEl: el.contrastVal, key: 'contrast' },
+            { slider: el.saturationSlider, valEl: el.saturationVal, key: 'saturation' },
+            { slider: el.warmthSlider, valEl: el.warmthVal, key: 'warmth' }
+        ];
+
+        manualSliders.forEach(({ slider, valEl, key }) => {
+            slider.addEventListener('input', (e) => {
+                state[key] = Number(e.target.value);
+                valEl.textContent = state[key] > 0 ? `+${state[key]}` : state[key];
+                schedulePreviewRender();
+            });
+        });
+
+        // أدوات العلامة المائية
+        el.watermarkToggle.addEventListener('change', (e) => {
+            state.watermarkEnabled = e.target.checked;
+            el.watermarkControls.classList.toggle('opacity-40', !state.watermarkEnabled);
+            el.watermarkControls.classList.toggle('pointer-events-none', !state.watermarkEnabled);
+            schedulePreviewRender();
+        });
+
+        [
+            { input: el.deviceInput, key: 'device' },
+            { input: el.focalInput, key: 'focalLength' },
+            { input: el.apertureInput, key: 'aperture' },
+            { input: el.shutterInput, key: 'shutterSpeed' },
+            { input: el.isoInput, key: 'iso' },
+            { input: el.dateInput, key: 'dateTime' }
+        ].forEach(({ input, key }) => {
+            input.addEventListener('input', (e) => {
+                state[key] = e.target.value;
+                schedulePreviewRender();
+            });
+        });
+
+        el.barHeightSlider.addEventListener('input', (e) => {
+            state.barHeightPercent = parseFloat(e.target.value);
+            el.barHeightValue.textContent = `${state.barHeightPercent}%`;
+            schedulePreviewRender();
+        });
+
+        document.querySelectorAll('.logo-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.logo-btn').forEach(b => {
+                    b.classList.remove('border-2', 'border-blue-500', 'bg-blue-600/15');
+                    b.classList.add('border', 'border-slate-800', 'bg-[#141b29]');
+                });
+                btn.classList.remove('border', 'border-slate-800', 'bg-[#141b29]');
+                btn.classList.add('border-2', 'border-blue-500', 'bg-blue-600/15');
+                state.logoType = btn.dataset.logo;
+                schedulePreviewRender();
+            });
+        });
+
+        el.uploadCustomLogoBtn.addEventListener('click', () => el.customLogoInput.click());
+        el.customLogoInput.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const img = new Image();
+                img.onload = () => {
+                    state.customLogoImg = img;
+                    state.logoType = 'custom';
+                    document.querySelectorAll('.logo-btn').forEach(b => {
+                        b.classList.remove('border-2', 'border-blue-500', 'bg-blue-600/15');
+                        b.classList.add('border', 'border-slate-800', 'bg-[#141b29]');
+                    });
+                    schedulePreviewRender();
+                    showToast('تم تطبيق الشعار المخصص بنجاح', 'success');
+                };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // زر المقارنة (قبل / بعد) بالضغط المطول (Mouse & Touch)
+        const startCompare = (e) => {
+            if (e.cancelable) e.preventDefault();
+            if (!state.image) return;
+            state.isComparingBefore = true;
+            el.beforeBadge.classList.remove('hidden');
+            el.previewStatusText.textContent = 'الصورة الأصلية (قبل التعديل)';
+            buildProcessedCanvas(el.previewCanvas, false);
+        };
+        const endCompare = () => {
+            if (!state.isComparingBefore) return;
+            state.isComparingBefore = false;
+            el.beforeBadge.classList.add('hidden');
+            el.previewStatusText.textContent = 'المعاينة الحية (بعد التعديل)';
+            buildProcessedCanvas(el.previewCanvas, false);
+        };
+
+        el.compareBtn.addEventListener('mousedown', startCompare);
+        el.compareBtn.addEventListener('touchstart', startCompare, { passive: false });
+        window.addEventListener('mouseup', endCompare);
+        window.addEventListener('touchend', endCompare);
+
+        // زر إعادة ضبط التعديلات
+        el.resetAllBtn.addEventListener('click', () => {
+            state.preset = 'original';
+            state.presetIntensity = 100;
+            state.autoLight = false;
+            state.upscale4k = false;
+            state.clarity = 0;
+            state.brightness = 0;
+            state.contrast = 0;
+            state.saturation = 0;
+            state.warmth = 0;
+
+            el.presetIntensity.value = 100;
+            el.presetIntensityVal.textContent = '100%';
+            el.autoLightToggle.checked = false;
+            el.upscale4kToggle.checked = false;
+            el.claritySlider.value = 0;
+            el.clarityVal.textContent = '0%';
+            el.activePresetLabel.textContent = 'الأصلية';
+
+            manualSliders.forEach(({ slider, valEl }) => {
+                slider.value = 0;
+                valEl.textContent = '0';
+            });
+
+            document.querySelectorAll('.preset-card').forEach((c, idx) => {
+                if (idx === 0) {
+                    c.classList.remove('border', 'border-slate-800', 'bg-[#141b29]');
+                    c.classList.add('border-2', 'border-blue-500', 'bg-blue-600/15');
+                } else {
+                    c.classList.remove('border-2', 'border-blue-500', 'bg-blue-600/15');
+                    c.classList.add('border', 'border-slate-800', 'bg-[#141b29]');
+                }
+            });
+
+            schedulePreviewRender();
+            showToast('تمت إعادة ضبط جميع الفلاتر والتعديلات', 'info');
+        });
+
+        // =========================================================================
+        // 9. التصدير والحفظ بكامل الدقة الأصلية (Full Resolution Export)
+        // =========================================================================
+        el.downloadBtn.addEventListener('click', () => {
+            if (!state.image) return;
+
+            el.downloadBtn.disabled = true;
+            const prevText = el.downloadBtnText.textContent;
+            el.downloadBtnText.textContent = 'جاري المعالجة بالدقة الكاملة...';
+
+            setTimeout(() => {
+                try {
+                    // إنشاء Canvas مخفي بأبعاد الصورة الكاملة (أو المضاعفة في حال 4K)
+                    const exportCanvas = document.createElement('canvas');
+                    buildProcessedCanvas(exportCanvas, true);
+
+                    const mimeType = el.exportFormat.value;
+                    const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+                    const suffix = state.upscale4k ? '_4K_Studio' : '_PixelStudio';
+
+                    exportCanvas.toBlob((blob) => {
+                        if (!blob) {
+                            showToast('حدث خطأ أثناء تصدير الصورة.', 'error');
+                            return;
+                        }
+                        const finalSizeMB = (blob.size / (1024 * 1024)).toFixed(2);
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = `${state.originalFileName}${suffix}.${ext}`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        setTimeout(() => URL.revokeObjectURL(url), 5000);
+
+                        showToast(`تم الحفظ بنجاح (${exportCanvas.width}×${exportCanvas.height} | ${finalSizeMB} MB)`, 'success');
+                    }, mimeType, 1.0);
+                } catch (err) {
+                    console.error(err);
+                    showToast('تعذر إتمام التصدير، حاول تقليل الدقة.', 'error');
+                } finally {
+                    el.downloadBtn.disabled = false;
+                    el.downloadBtnText.textContent = prevText;
+                }
+            }, 60);
+        });
+    </script>
+</body>
+</html>
